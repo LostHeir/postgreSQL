@@ -1,0 +1,25 @@
+-- This will fail
+INSERT INTO fav (post_id, account_id, howmuch)
+VALUES (1,1,1)
+RETURNING *;
+INSERT INTO fav (post_id, account_id, howmuch)
+VALUES (1,1,1)
+ON CONFLICT (post_id, account_id)
+DO UPDATE SET howmuch = fav.howmuch + 1
+RETURNING *;
+
+------------------------------------------------------
+
+BEGIN;
+SELECT howmuch FROM fav WHERE account_id=1 AND post_id=1 FOR UPDATE OF fav;
+UPDATE SET howmuch=999 WHERE account_id=1 AND post_id=1;
+ROLLBACK;
+SELECT howmuch FROM fav WHERE account_id=1 AND post_id=1;
+
+BEGIN;
+SELECT howmuch FROM fav WHERE account_id=1 AND post_id=1 FOR UPDATE OF fav;
+UPDATE SET howmuch=999 WHERE account_id=1 AND post_id=1;
+COMMIT;
+SELECT howmuch FROM fav WHERE account_id=1 AND post_id=1;
+
+-----------------------------------------------------
