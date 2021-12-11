@@ -1,0 +1,83 @@
+CREATE TABLE cr2 (
+id SERIAL,
+url TEXT,
+content TEXT
+);
+
+-------------------------------------------------------------------
+
+
+insert into cr2 (url)
+select repeat('Neon', 1000) || generate_series(1,5000);
+select pg_relation_size('cr2'), pg_indexes_size('cr2');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+507904 | 0
+
+-------------------------------------------------------------------
+
+
+create unique index cr2_unique on cr2 (url);
+discuss=> select pg_relation_size('cr2'), pg_indexes_size('cr2');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+507904 | 450560
+
+-------------------------------------------------------------------
+
+create unique index cr2_md5 on cr2 (md5(url));
+select pg_relation_size('cr2'), pg_indexes_size('cr2');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+507904 | 311296
+
+-----------------------------------------------------------------
+
+explain select * from cr2 where url='lemons';
+Seq Scan on cr2 (cost=0.00..124.50 rows=1 width=99)
+Filter: (url = 'lemons'::text)
+
+--------------------------------------------------------------------
+
+explain select * from cr2 where md5(url)=md5('lemons');
+Index Scan using cr2_md5 on cr2 (cost=0.28..8.30 rows=1 width=99)
+Index Cond: (md5(url) = '238ad51a7f1d25d991e6b51879d6b66d'::text)
+
+------------------------------------------------------------------------
+
+explain analyze select * from cr2 where md5(url)=md5('lemons');
+Index Scan using cr2_md5 on cr2 (cost=0.28..8.30 rows=1 width=99)
+(actual time=0.118..0.118 rows=0 loops=1)
+Index Cond: (md5(url) = '238ad51a7f1d25d991e6b51879d6b66d'::text)
+Planning Time: 0.116 ms
+Execution Time: 0.142 ms
+
+------------------------------------------------------------------------
+explain analyze select * from cr2 where url='lemons';
+Seq Scan on cr2 (cost=0.00..124.50 rows=1 width=99)
+(actual time=1.764..1.764 rows=0 loops=1)
+Filter: (url = 'lemons'::text)
+Rows Removed by Filter: 5000
+Planning Time: 0.067 ms
+Execution Time: 1.784 ms
+
+----------------------------------------------------------------------------------
+
+CREATE TABLE cr3 (
+id SERIAL,
+url TEXT,
+url_md5 uuid unique,
+content TEXT
+);
+insert into cr3 (url)
+select repeat('Neon', 1000) || generate_series(1,5000);
+update cr3 set url_md5 = md5(url)::uuid;
+select pg_relation_size('cr3'), pg_indexes_size('cr3');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+1097728 | 368640
+explain analyze select * from cr3 where url_md5=md5('lemons')::uuid;
+Index Scan using cr3_url_md5_key on cr3
+Index Cond: (url_md5 = '238ad51a-7f1d-25d9-91e6-b51879d6b66d'::uuid)
+Planning Time: 0.110 ms
+Execution Time: 0.030 ms
