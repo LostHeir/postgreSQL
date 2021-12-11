@@ -1,0 +1,33 @@
+CREATE TABLE textfun (
+content TEXT
+);
+CREATE INDEX textfun_b ON textfun (content);
+
+-----------------------------------------------
+
+SELECT pg_relation_size('textfun'), pg_indexes_size('textfun');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+0 | 8192
+
+------------------------------------------------
+
+SELECT pg_relation_size('textfun'), pg_indexes_size('textfun');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+0 | 8192
+
+------------------------------------------------
+
+INSERT INTO textfun (content)
+SELECT (CASE WHEN (random() < 0.5)
+THEN 'great text here'
+ELSE 'not great at all'
+END) || generate_series(100000,200000);
+
+---------------------------------------------------
+
+SELECT pg_relation_size('textfun'), pg_indexes_size('textfun');
+pg_relation_size | pg_indexes_size
+------------------+-----------------
+6832128| 8585216
